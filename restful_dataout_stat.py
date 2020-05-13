@@ -22,7 +22,7 @@ class dataout_stat(Resource):
         return self.gather_dataout_stat(id)
 
     def  gather_dataout_stat(self, id):
-        access_country = {}
+        accessed_countries = {}
 
         """
         수집(프로세스) : 로드밸런서, 로그스태시1~12
@@ -38,7 +38,7 @@ class dataout_stat(Resource):
             for row in records:
                 country = row["country"]
                 count   = row["count"]
-                access_country[country] = count
+                accessed_countries[country] = count
         except Exception as e:
             logging.error('Error while fetching %s.(%s)', query, e)        
         finally:
@@ -144,4 +144,4 @@ class dataout_stat(Resource):
         #    cnx.cursor().close()
         #    cnx.close()
 
-        return {"access_country" : access_country, "dataout_stat": {}}
+        return {"accessed_countries" : accessed_countries, "dataout_stat": {}}
