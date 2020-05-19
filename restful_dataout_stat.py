@@ -5,6 +5,8 @@ from db_manager import db_manager
 import os
 import logging  
 
+MAX_ROW = 7
+
 def get_rest_args_parser():
     parser = reqparse.RequestParser()
     parser.add_argument('id') # dataout_view record id
@@ -21,20 +23,16 @@ class dataout_stat(Resource):
     def get(self, id):
         return self.gather_dataout_stat(id)
 
-    def  gather_dataout_stat(self, id):
-        accessed_countries = {}
-
-        """
-        수집(프로세스) : 로드밸런서, 로그스태시1~12
-        """
+    def get_accessed_countries_stat(self, id):
         query = "SELECT * FROM insider_threat.dataout_access_country where do_id='{}' order by _id ;".format(id)
         logging.info(query)
         cnx = self.dbmanager.getConnection()
+        accessed_countries = {}        
         try:            
             cursor = cnx.cursor(dictionary=True)
             cursor.execute(query)
             records = cursor.fetchall()
-
+        
             for row in records:
                 country = row["country"]
                 count   = row["count"]
@@ -44,104 +42,241 @@ class dataout_stat(Resource):
         finally:
             cnx.cursor().close()
             cnx.close()
+        return accessed_countries
 
-        #"""
-        #수집(유실) : 로드밸런서, 로그스태시1~12
-        #"""
-        #query = "SELECT * FROM collect_net_status order by _id desc limit 1;"
-        #cnx = self.dbmanager.getConnection()
-        #try:
-        #    cursor = cnx.cursor(dictionary=True)    
-        #    cursor.execute(query)
-        #    records = cursor.fetchall()
-
-        #    for row in records:
-        #        net_status["LBLOSS"]   = row["lb_drop"]
-        #        net_status["LS01LOSS"] = row["ls01_drop"]
-        #        net_status["LS02LOSS"] = row["ls02_drop"]
-        #        net_status["LS03LOSS"] = row["ls03_drop"]
-        #        net_status["LS04LOSS"] = row["ls04_drop"]
-        #        net_status["LS05LOSS"] = row["ls05_drop"]
-        #        net_status["LS06LOSS"] = row["ls06_drop"]
-        #        net_status["LS07LOSS"] = row["ls07_drop"]
-        #        net_status["LS08LOSS"] = row["ls08_drop"]
-        #        net_status["LS09LOSS"] = row["ls09_drop"]
-        #        net_status["LS10LOSS"] = row["ls10_drop"]
-        #        net_status["LS11LOSS"] = row["ls11_drop"]
-        #        net_status["LS12LOSS"] = row["ls12_drop"]
-        #except Exception as e:
-        #    logging.error('Error while fetching %s.(%s)', query, e)        
-        #finally:
-        #    cnx.cursor().close()
-        #    cnx.close()
-
-        #"""
-        #전송 : 카프카1~3 프로세스 상태, 파티션0~5 지연 상태
-        #"""
-        #query = "SELECT * FROM cdc2r_management.trasmit_kafka_status order by _id desc limit 1;"
-        #cnx = self.dbmanager.getConnection()
-        #try:
-        #    cursor = cnx.cursor(dictionary=True)    
-        #    cursor.execute(query)
-        #    records = cursor.fetchall()
+    def get_dataout_class_stat(self, id):
+        query = "SELECT * FROM insider_threat.dataout_class_stat where do_id='{}' order by _id ;".format(id)
+        logging.info(query)
+        cnx = self.dbmanager.getConnection()
+        dataout_class_stat = {}
+        try:            
+            cursor = cnx.cursor(dictionary=True)
+            cursor.execute(query)
+            records = cursor.fetchall()
+            row_count = 1
+        
+            labels = ['dst_port_count', 'app_proto_count', 'net_proto_count', 'rdp_ip_count', 'apt_event_count', 'waf_event_count', 'ips_event_count']
+            data = {}
+            for row in records:
+                stat_type = row["type"]
+                data[stat_type] = [ row['dst_port_count'],
+                                                  row['app_proto_count'],
+                                                  row['net_proto_count'],
+                                                  row['rdp_ip_count'],
+                                                  row['apt_event_count'],
+                                                  row['waf_event_count'],
+                                                  row['ips_event_count']]
+                if row_count == MAX_ROW:
+                    break
+                
+                row_count += 1            
+            else:
+                data[0] = [0] * 7
+                data[1] = [0] * 7
+        
+            dataout_class_stat['result'] = 'success'
+            dataout_class_stat['labels'] = labels
+            dataout_class_stat['data']   = data
             
-        #    for row in records:
-        #        pss_status["Kafka01"]    = row["kafka_01_status"]
-        #        pss_status["Kafka02"]    = row["kafka_02_status"]
-        #        pss_status["Kafka03"]    = row["kafka_03_status"]
-        #        net_status["Partition00"] = row["partition_fw00_lag"]
-        #        net_status["Partition01"] = row["partition_fw01_lag"]
-        #        net_status["Partition02"] = row["partition_fw02_lag"]
-        #        net_status["Partition03"] = row["partition_fw03_lag"]
-        #        net_status["Partition04"] = row["partition_fw04_lag"]
-        #        net_status["Partition05"] = row["partition_fw05_lag"]
+        except Exception as e:
+            dataout_class_stat['result'] = 'fail'
+            dataout_class_stat['reason'] = str(e)
+            logging.error('Error while fetching %s.(%s)', query, e)        
+        finally:
+            cnx.cursor().close()
+            cnx.close()
+        return dataout_class_stat
 
-        #except Exception as e:
-        #    logging.error('Error while fetching %s.(%s)', query, e)        
-        #finally:
-        #    cnx.cursor().close()
-        #    cnx.close()
+    def get_dataout_bytesin_avg_weekly_stat(self, dataout_class_stat, id):
+        query = "SELECT * FROM insider_threat.dataout_bytesin_avg_weekly  where do_id='{}' order by _id ;".format(id)
+        logging.info(query)
+        cnx = self.dbmanager.getConnection()
+        dataout_bytesin_avg_weekly = {}
+        try:            
+            cursor = cnx.cursor(dictionary=True)
+            cursor.execute(query)
+            records = cursor.fetchall()
+            row_count = 1
+        
+            labels = ['D-7', 'D-6', 'D-5', 'D-4', 'D-3', 'D-2', 'D-1']
+            data = {}
+            for row in records:
+                stat_type = row["type"]
+                data[stat_type] = [row['dminus7'],
+                                   row['dminus6'],
+                                   row['dminus5'],
+                                   row['dminus4'],
+                                   row['dminus3'],
+                                   row['dminus2'],
+                                   row['dminus1']]
+                if row_count == MAX_ROW:
+                    break
+                
+                row_count += 1            
+            else:
+                data[0] = [0] * 7
+                data[1] = [0] * 7
+        
+            dataout_bytesin_avg_weekly['result'] = 'success'
+            dataout_bytesin_avg_weekly['labels'] = labels
+            dataout_bytesin_avg_weekly['data']   = data
+            
+        except Exception as e:
+            dataout_bytesin_avg_weekly['result'] = 'fail'
+            dataout_bytesin_avg_weekly['reason'] = str(e)
+            logging.error('Error while fetching %s.(%s)', query, e)        
+        finally:
+            cnx.cursor().close()
+            cnx.close()
+        return dataout_bytesin_avg_weekly
 
-        #"""
-        #전송 : 로그 스태시 1~6 프로세스 상태
-        #"""
-        #query = "SELECT * FROM cdc2r_management.trasmit_logstash_fw_status order by _id desc limit 1;"
-        #cnx = self.dbmanager.getConnection()
-        #try:
-        #    cursor = cnx.cursor(dictionary=True)    
-        #    cursor.execute(query)
-        #    records = cursor.fetchall()            
-        #    for row in records:
-        #        pss_status["LSFW01"] = row["logstash_fw01_status"]
-        #        pss_status["LSFW02"] = row["logstash_fw02_status"]
-        #        pss_status["LSFW03"] = row["logstash_fw03_status"]
-        #        pss_status["LSFW04"] = row["logstash_fw04_status"]
-        #        pss_status["LSFW05"] = row["logstash_fw05_status"]
-        #        pss_status["LSFW06"] = row["logstash_fw06_status"]
+    def get_datout_bytesout_avg_weekly_stat(self, dataout_class_stat, id):
+        query = "SELECT * FROM insider_threat.dataout_bytesout_avg_weekly  where do_id='{}' order by _id ;".format(id)
+        logging.info(query)
+        cnx = self.dbmanager.getConnection()
+        dataout_bytesout_avg_weekly = {}
+        try:            
+            cursor = cnx.cursor(dictionary=True)
+            cursor.execute(query)
+            records = cursor.fetchall()
+            row_count = 1
+        
+            labels = ['D-7', 'D-6', 'D-5', 'D-4', 'D-3', 'D-2', 'D-1']
+            data = {}
+            for row in records:
+                stat_type = row["type"]
+                data[stat_type] = [row['dminus7'],
+                                   row['dminus6'],
+                                   row['dminus5'],
+                                   row['dminus4'],
+                                   row['dminus3'],
+                                   row['dminus2'],
+                                   row['dminus1']]
+                if row_count == MAX_ROW:
+                    break
+                
+                row_count += 1            
+            else:
+                data[0] = [0] * 7
+                data[1] = [0] * 7
+        
+            dataout_bytesout_avg_weekly['result'] = 'success'
+            dataout_bytesout_avg_weekly['labels'] = labels
+            dataout_bytesout_avg_weekly['data']   = data
+            
+        except Exception as e:
+            dataout_bytesout_avg_weekly['result'] = 'fail'
+            dataout_bytesout_avg_weekly['reason'] = str(e)
+            logging.error('Error while fetching %s.(%s)', query, e)        
+        finally:
+            cnx.cursor().close()
+            cnx.close()
+        return dataout_bytesout_avg_weekly
 
-        #except Exception as e:
-        #    logging.error('Error while fetching %s.(%s)', query, e)        
-        #finally:
-        #    cnx.cursor().close()
-        #    cnx.close()
+    def get_dataout_bytesinout_weekly_stat(self, id):
+        query = "SELECT * FROM insider_threat.dataout_bytesinout_weekly where do_id='{}' order by _id ;".format(id)
+        logging.info(query)
+        cnx = self.dbmanager.getConnection()
+        dataout_bytesinout_weekly = {}
+        try:            
+            cursor = cnx.cursor(dictionary=True)
+            cursor.execute(query)
+            records = cursor.fetchall()
+            row_count = 1
+        
+            labels = ['D-7', 'D-6', 'D-5', 'D-4', 'D-3', 'D-2', 'D-1']
+            data = {}
+            for row in records:
+                stat_type = row["type"]
+                data[stat_type] = [row['dminus7'],
+                                   row['dminus6'],
+                                   row['dminus5'],
+                                   row['dminus4'],
+                                   row['dminus3'],
+                                   row['dminus2'],
+                                   row['dminus1']]
+                if row_count == MAX_ROW:
+                    break
+                
+                row_count += 1
+            else:
+                data[0] = [0] * 7
+                data[1] = [0] * 7
+            
+            dataout_bytesinout_weekly['result'] = 'success'
+            dataout_bytesinout_weekly['labels'] = labels
+            dataout_bytesinout_weekly['data']   = data
+            
+        except Exception as e:
+            dataout_bytesinout_weekly['result'] = 'fail'
+            dataout_bytesinout_weekly['reason'] = str(e)
+            logging.error('Error while fetching %s.(%s)', query, e)        
+        finally:
+            cnx.cursor().close()
+            cnx.close()
+        return dataout_bytesinout_weekly
 
-        #"""
-        #저장 : 엘라스틱 상태
-        #"""        
-        #query = "SELECT * from esnode_status where node_id in (SELECT distinct(node_id) from esnode_status where collect_time >= DATE_SUB(NOW(),INTERVAL 1 HOUR)) and collect_time >= DATE_SUB(NOW(),INTERVAL 1 HOUR) order by node_id;"
-        #cnx = self.dbmanager.getConnection()
-        #try:
-        #    cursor = cnx.cursor(dictionary=True)    
-        #    cursor.execute(query)
-        #    records = cursor.fetchall()            
-        #    for row in records:
-        #        node_id = row["node_id"]                
-        #        pss_status[node_id] = "active"
 
-        #except Exception as e:
-        #    logging.error('Error while fetching %s.(%s)', query, e)        
-        #finally:
-        #    cnx.cursor().close()
-        #    cnx.close()
+    def get_dataout_additional_detection(self, id):
+        query = "SELECT * FROM insider_threat.dataout_additional_detection where do_id='{}' order by _id ;".format(id)
+        logging.info(query)
+        cnx = self.dbmanager.getConnection()
+        dataout_additional_detection = {}
+        try:            
+            cursor = cnx.cursor(dictionary=True)
+            cursor.execute(query)
+            records = cursor.fetchall()
+            labels = ['Detection Time', 'Application', 'Leakeage Volumne']
+            data = []
+            for row in records:
+                data.append([str(row['detection_time']), 
+                             row['application'], 
+                             row['volume']])
+                
+            dataout_additional_detection ['result'] = 'success'
+            dataout_additional_detection ['labels'] = labels
+            dataout_additional_detection ['data']   = data
+            
+        except Exception as e:
+            dataout_additional_detection ['result'] = 'fail'
+            dataout_additional_detection ['reason'] = str(e)
+            logging.error('Error while fetching %s.(%s)', query, e)        
+        finally:
+            cnx.cursor().close()
+            cnx.close()
+        return dataout_additional_detection
 
-        return {"accessed_countries" : accessed_countries, "dataout_stat": {}}
+    def  gather_dataout_stat(self, id):
+
+        # [1] 국가 별 접속 통계
+        accessed_countries = self.get_accessed_countries_stat(id)
+
+
+        # [2] SRC IP VS 동일 대역 비교 통계
+        dataout_class_stat = self.get_dataout_class_stat(id)
+
+        
+        # [3] 목적지 IP로 BytesIn 평균
+        dataout_bytesin_avg_weekly = self.get_dataout_bytesin_avg_weekly_stat(dataout_class_stat, id)
+
+        
+        # [4] 목적지 IP로 BytesOut 평균
+        dataout_bytesout_avg_weekly = self.get_datout_bytesout_avg_weekly_stat(dataout_class_stat, id)
+
+
+        
+        # [5] 데이터 유출 In/Out/Out-In 통계
+        dataout_bytesinout_weekly = self.get_dataout_bytesinout_weekly_stat(id)
+
+    
+        # [6] 중복 탐지 리스트
+        dataout_additional_detection = self.get_dataout_additional_detection(id)
+
+        return {
+            "accessed_countries"           : accessed_countries, 
+            "dataout_class_stat"           : dataout_class_stat,
+            "dataout_bytesin_avg_weekly"   : dataout_bytesin_avg_weekly,
+            "dataout_bytesout_avg_weekly"  : dataout_bytesout_avg_weekly,
+            "dataout_bytesinout_weekly"    : dataout_bytesinout_weekly,
+            "dataout_additional_detection" : dataout_additional_detection
+            }
