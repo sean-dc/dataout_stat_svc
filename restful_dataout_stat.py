@@ -56,7 +56,7 @@ class dataout_stat(Resource):
             row_count = 1
         
             labels = ['dst_port_count', 'app_proto_count', 'net_proto_count', 'rdp_ip_count', 'apt_event_count', 'waf_event_count', 'ips_event_count']
-            data = {}
+            data = {0:[0]*7, 1:[0]*7}
             for row in records:
                 stat_type = row["type"]
                 data[stat_type] = [ row['dst_port_count'],
@@ -69,10 +69,7 @@ class dataout_stat(Resource):
                 if row_count == MAX_ROW:
                     break
                 
-                row_count += 1            
-            else:
-                data[0] = [0] * 7
-                data[1] = [0] * 7
+                row_count += 1
         
             dataout_class_stat['result'] = 'success'
             dataout_class_stat['labels'] = labels
@@ -99,7 +96,7 @@ class dataout_stat(Resource):
             row_count = 1
         
             labels = ['D-7', 'D-6', 'D-5', 'D-4', 'D-3', 'D-2', 'D-1']
-            data = {}
+            data = {0:[0]*7, 1:[0]*7}
             for row in records:
                 stat_type = row["type"]
                 data[stat_type] = [row['dminus7'],
@@ -112,10 +109,7 @@ class dataout_stat(Resource):
                 if row_count == MAX_ROW:
                     break
                 
-                row_count += 1            
-            else:
-                data[0] = [0] * 7
-                data[1] = [0] * 7
+                row_count += 1
         
             dataout_bytesin_avg_weekly['result'] = 'success'
             dataout_bytesin_avg_weekly['labels'] = labels
@@ -142,7 +136,7 @@ class dataout_stat(Resource):
             row_count = 1
         
             labels = ['D-7', 'D-6', 'D-5', 'D-4', 'D-3', 'D-2', 'D-1']
-            data = {}
+            data = {0:[0]*7, 1:[0]*7}
             for row in records:
                 stat_type = row["type"]
                 data[stat_type] = [row['dminus7'],
@@ -155,10 +149,7 @@ class dataout_stat(Resource):
                 if row_count == MAX_ROW:
                     break
                 
-                row_count += 1            
-            else:
-                data[0] = [0] * 7
-                data[1] = [0] * 7
+                row_count += 1     
         
             dataout_bytesout_avg_weekly['result'] = 'success'
             dataout_bytesout_avg_weekly['labels'] = labels
@@ -185,7 +176,7 @@ class dataout_stat(Resource):
             row_count = 1
         
             labels = ['D-7', 'D-6', 'D-5', 'D-4', 'D-3', 'D-2', 'D-1']
-            data = {}
+            data = {0:[0]*7, 1:[0]*7}
             for row in records:
                 stat_type = row["type"]
                 data[stat_type] = [row['dminus7'],
@@ -199,9 +190,6 @@ class dataout_stat(Resource):
                     break
                 
                 row_count += 1
-            else:
-                data[0] = [0] * 7
-                data[1] = [0] * 7
             
             dataout_bytesinout_weekly['result'] = 'success'
             dataout_bytesinout_weekly['labels'] = labels
