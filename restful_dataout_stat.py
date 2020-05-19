@@ -87,7 +87,7 @@ class dataout_stat(Resource):
             cnx.close()
         return dataout_class_stat
 
-    def get_dataout_bytesin_avg_weekly_stat(self, dataout_class_stat, id):
+    def get_dataout_bytesin_avg_weekly_stat(self, id):
         query = "SELECT * FROM insider_threat.dataout_bytesin_avg_weekly  where do_id='{}' order by _id ;".format(id)
         logging.info(query)
         cnx = self.dbmanager.getConnection()
@@ -130,7 +130,7 @@ class dataout_stat(Resource):
             cnx.close()
         return dataout_bytesin_avg_weekly
 
-    def get_datout_bytesout_avg_weekly_stat(self, dataout_class_stat, id):
+    def get_datout_bytesout_avg_weekly_stat(self, id):
         query = "SELECT * FROM insider_threat.dataout_bytesout_avg_weekly  where do_id='{}' order by _id ;".format(id)
         logging.info(query)
         cnx = self.dbmanager.getConnection()
@@ -257,11 +257,11 @@ class dataout_stat(Resource):
 
         
         # [3] 목적지 IP로 BytesIn 평균
-        dataout_bytesin_avg_weekly = self.get_dataout_bytesin_avg_weekly_stat(dataout_class_stat, id)
+        dataout_bytesin_avg_weekly = self.get_dataout_bytesin_avg_weekly_stat(id)
 
         
         # [4] 목적지 IP로 BytesOut 평균
-        dataout_bytesout_avg_weekly = self.get_datout_bytesout_avg_weekly_stat(dataout_class_stat, id)
+        dataout_bytesout_avg_weekly = self.get_datout_bytesout_avg_weekly_stat(id)
 
 
         
