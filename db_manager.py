@@ -2,14 +2,25 @@ import mysql.connector
 from singleton_meta import Singleton
 from mysql.connector import pooling
 
+# CONFIG(DB) READ BEGIN
+from config_reader import Config
+
+splus_config = Config().getConfig()
+db_host = splus_config['DB']['HOST']
+db_port = splus_config['DB']['PORT']
+db_user = splus_config['DB']['USER']
+db_pwd  = splus_config['DB']['PASSWORD']
+
+# CONFIG(DB) READ END
+
 config = {
   'pool_name': 'pynative_pool',
   'pool_size': 1, #5
   'pool_reset_session': True,
-  'user': 'root',
-  'password': 'root',
-  'host': '172.16.51.121',
-  'port': '5601',
+  'user':     db_user,
+  'password': db_pwd,
+  'host':     db_host,
+  'port':     db_port,
   'database': 'cdc2r_management',
   'raise_on_warnings': True
 }
